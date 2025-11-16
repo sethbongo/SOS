@@ -62,7 +62,7 @@ public class MainActivity extends AppCompatActivity {
             if (location != null){
                 latitude = location.getLatitude();
                 longitude = location.getLongitude();
-                Toast.makeText(getApplicationContext(), "Ready to send!!", Toast.LENGTH_LONG).show();
+                Toast.makeText(getApplicationContext(), "Ready to send!", Toast.LENGTH_LONG).show();
             }else{
                 Toast.makeText(getApplicationContext(), "Not yet ready to send!", Toast.LENGTH_LONG).show();
             }
