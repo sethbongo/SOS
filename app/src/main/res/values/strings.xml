@@ -1,4 +1,4 @@
 <resources>
-    <string name="app_name">My Application</string>
-    <string name="s_o_s">S.O.S.</string>
+    <string name="app_name">SOS Emergency</string>
+    <string name="choose_sim">Choose SIM to send SOS</string>
 </resources>

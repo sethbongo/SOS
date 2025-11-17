@@ -5,21 +5,96 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".MainActivity">
+    android:background="#FAF8F8">
+
+    <TextView
+        android:id="@+id/title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="120dp"
+        android:text="EMERGENCY SOS"
+        android:textColor="#2C2626"
+        android:textSize="32sp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/instruction"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="40dp"
+        android:text="Enter 9-digit number (ex: 123456789)"
+        android:textColor="#161616"
+        android:textSize="18sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/title" />
+
+    <EditText
+        android:id="@+id/editTextNumber"
+        android:layout_width="218dp"
+        android:layout_height="67dp"
+        android:layout_marginTop="28dp"
+        android:hint="123456789"
+        android:inputType="number"
+        android:maxLength="9"
+        android:textColor="@color/black"
+        android:textSize="24sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.549"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/instruction" />
+
+    <Spinner
+        android:id="@+id/simSpinner"
+        android:layout_width="280dp"
+        android:layout_height="55dp"
+        android:prompt="@string/choose_sim"
+        app:layout_constraintTop_toBottomOf="@id/editTextNumber"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="20dp"/>
 
     <Button
         android:id="@+id/button"
-        android:layout_width="223dp"
-        android:layout_height="180dp"
-        android:backgroundTint="#F30000"
-        android:text="@string/s_o_s"
-        android:textColor="@color/black"
-        android:textSize="48sp"
+        android:layout_width="220dp"
+        android:layout_height="120dp"
+        android:layout_marginTop="112dp"
+        android:backgroundTint="#222222"
+        android:text="SEND SOS!"
+        android:textColor="#D50000"
+        android:textSize="28sp"
         android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.497"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/editTextNumber" />
+
+    <TextView
+        android:id="@+id/status"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="80dp"
+        android:text="Waiting for GPS..."
+        android:textColor="#FFFF00"
+        android:textSize="16sp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <TextView
+        android:id="@+id/textView"
+        android:layout_width="55dp"
+        android:layout_height="42dp"
+        android:text="+639"
+        android:textSize="24sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/editTextNumber"
+        app:layout_constraintHorizontal_bias="1.0"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.499" />
+        app:layout_constraintVertical_bias="0.312" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

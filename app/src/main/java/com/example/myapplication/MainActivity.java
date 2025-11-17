@@ -1,84 +1,205 @@
 package com.example.myapplication;
 
+import android.Manifest;
+import android.annotation.SuppressLint;
+import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.telephony.SubscriptionInfo;
+import android.telephony.SubscriptionManager;
 import android.telephony.SmsManager;
-import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.EditText;
+import android.widget.Spinner;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
-    double latitude = 0;
-    double longitude = 0;
-    LocationManager manager;
-    private GPSReceiver receiver;
 
-    Button btn;
+    private double latitude = 0.0;
+    private double longitude = 0.0;
+    private LocationManager locationManager;
+    private LocationListener locationListener;
+    private TextView statusText;
+    private Spinner simSpinner;
+    private List<Integer> subscriptionIds = new ArrayList<>();
+
+    private static final int PERMISSION_REQUEST_CODE = 100;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
-            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
-            return insets;
-        });
-        btn = findViewById(R.id.button);
 
-        btn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                SmsManager sms = SmsManager.getDefault();
-                String phoneNumber = "xxxxxxxxxxxx";
-                String messageBody = "Please take me from longitude: " + Double.toString(longitude) + " and latitude: " + Double.toString(latitude);
-                try {
-                    sms.sendTextMessage(phoneNumber, null,
-                            messageBody ,null, null);
-                    Toast.makeText(getApplicationContext(),
-                            "S.O.S. message sent!", Toast.LENGTH_LONG).show();
-                } catch (Exception e) {
-                    Toast.makeText(getApplicationContext(),
-                            "Message sending failed!", Toast.LENGTH_LONG).show();
-                }
-            }
-        });
+        Button btn = findViewById(R.id.button);
+        EditText editTextNumber = findViewById(R.id.editTextNumber);
+        statusText = findViewById(R.id.status);
+        simSpinner = findViewById(R.id.simSpinner);
+
+        setupLocationListener();
+        setupSimSpinner();
+
+        btn.setOnClickListener(v -> sendSosWithSelectedSim(editTextNumber.getText().toString().trim()));
     }
 
-    public class GPSReceiver implements LocationListener{
+    private void setupSimSpinner() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED) {
+            loadSimCards();
+        } else {
+            statusText.setText("Need phone permission for SIM selection");
+        }
+    }
 
-        @Override
-        public void onLocationChanged(@NonNull Location location) {
-            if (location != null){
-                latitude = location.getLatitude();
-                longitude = location.getLongitude();
-                Toast.makeText(getApplicationContext(), "Ready to send!", Toast.LENGTH_LONG).show();
-            }else{
-                Toast.makeText(getApplicationContext(), "Not yet ready to send!", Toast.LENGTH_LONG).show();
+    @SuppressLint("MissingPermission")
+    private void loadSimCards() {
+        SubscriptionManager subscriptionManager = getSystemService(SubscriptionManager.class);
+        List<SubscriptionInfo> subsInfoList = subscriptionManager.getActiveSubscriptionInfoList();
+
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
+                android.R.layout.simple_spinner_item);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+
+        subscriptionIds.clear();
+
+        if (subsInfoList != null && !subsInfoList.isEmpty()) {
+            for (SubscriptionInfo info : subsInfoList) {
+                String carrier = info.getCarrierName().toString();
+                String simSlot = "SIM " + (info.getSimSlotIndex() + 1);
+                String display = simSlot + " - " + carrier + " (" + info.getNumber() + ")";
+                if (info.getNumber() == null || info.getNumber().isEmpty()) {
+                    display = simSlot + " - " + carrier;
+                }
+                adapter.add(display);
+                subscriptionIds.add(info.getSubscriptionId());
+            }
+        } else {
+            adapter.add("Default SIM (Single SIM)");
+            subscriptionIds.add(-1); // Use default
+        }
+
+        simSpinner.setAdapter(adapter);
+        statusText.setText("SIM loaded • Waiting for GPS...");
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        requestPermissionsIfNeeded();
+    }
+
+    private void requestPermissionsIfNeeded() {
+        String[] permissions = {
+                Manifest.permission.SEND_SMS,
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+                Manifest.permission.READ_PHONE_STATE
+        };
+
+        boolean allGranted = true;
+        for (String p : permissions) {
+            if (ContextCompat.checkSelfPermission(this, p) != PackageManager.PERMISSION_GRANTED) {
+                allGranted = false;
+                break;
             }
         }
 
-        @Override
-        public void onProviderEnabled(@NonNull String provider) {
-            LocationListener.super.onProviderEnabled(provider);
-            Toast.makeText(getApplicationContext(), "GPS Enabled!", Toast.LENGTH_LONG).show();
+        if (allGranted) {
+            startLocationUpdatesSafely();
+            loadSimCards();
+        } else {
+            ActivityCompat.requestPermissions(this, permissions, PERMISSION_REQUEST_CODE);
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == PERMISSION_REQUEST_CODE) {
+            boolean allOk = true;
+            for (int r : grantResults) {
+                if (r != PackageManager.PERMISSION_GRANTED) allOk = false;
+            }
+            if (allOk) {
+                startLocationUpdatesSafely();
+                loadSimCards();
+            } else {
+                Toast.makeText(this, "All permissions required!", Toast.LENGTH_LONG).show();
+            }
+        }
+    }
+
+    private void setupLocationListener() {
+        locationListener = location -> {
+            latitude = location.getLatitude();
+            longitude = location.getLongitude();
+            runOnUiThread(() -> {
+                statusText.setText("GPS READY • Tap SEND SOS");
+                statusText.setTextColor(getResources().getColor(android.R.color.holo_green_light));
+            });
+        };
+    }
+
+    @SuppressLint("MissingPermission")
+    private void startLocationUpdatesSafely() {
+        locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
+        try {
+            if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 2000, 5, locationListener);
+            } else if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+                locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 2000, 5, locationListener);
+            }
+        } catch (Exception ignored) {}
+    }
+
+    private void sendSosWithSelectedSim(String input) {
+        if (input.length() != 9 || !input.matches("\\d+")) {
+            Toast.makeText(this, "Enter valid 9-digit number!", Toast.LENGTH_LONG).show();
+            return;
         }
 
-        @Override
-        public void onProviderDisabled(@NonNull String provider) {
-            LocationListener.super.onProviderDisabled(provider);
-            Toast.makeText(getApplicationContext(), "Please enable GPS!!", Toast.LENGTH_LONG).show();
+        String phoneNumber = "09" + input;
+        int selectedPos = simSpinner.getSelectedItemPosition();
+        int subscriptionId = subscriptionIds.get(selectedPos);
 
+        String message = (latitude == 0.0 || longitude == 0.0)
+                ? "EMERGENCY SOS!\nI need help NOW!\nGPS loading... Please call me!"
+                : "EMERGENCY! PICK ME UP!\nhttps://maps.google.com/?q=" + latitude + "," + longitude +
+                "\nLat: " + latitude + " | Long: " + longitude;
+
+        try {
+            SmsManager smsManager;
+            if (subscriptionId == -1) {
+                smsManager = SmsManager.getDefault();
+            } else {
+                smsManager = SmsManager.getSmsManagerForSubscriptionId(subscriptionId);
+            }
+
+            smsManager.sendTextMessage(phoneNumber, null, message, null, null);
+            Toast.makeText(this, "SOS sent via " + simSpinner.getSelectedItem().toString() + "!", Toast.LENGTH_LONG).show();
+        } catch (Exception e) {
+            Toast.makeText(this, "Failed to send! Check SIM or balance.", Toast.LENGTH_LONG).show();
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (locationManager != null) {
+            locationManager.removeUpdates(locationListener);
         }
     }
 }
